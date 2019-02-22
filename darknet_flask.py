@@ -28,6 +28,7 @@ import random
 import os
 import json
 import os
+import cv2
 from flask import Flask, request, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 
@@ -455,6 +456,81 @@ def upload_json():
             return json.dumps(detections) 
 
     return "NO FILES UPLOADED."
+
+
+#upload and split into 9 sub images (expirmental for supersized image)
+@app.route('/upload9', methods=['GET','POST'])
+def upload9():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit a empty part without filename
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            print(file_path)
+            file.save(file_path)
+            
+            #split into 9 images
+            img = cv2.imread(file_path)
+
+            height, width, channels = img.shape
+
+            x_crops=3
+            y_crops=3
+
+            print(height, width, channels)
+
+            sub_image_paths=[]
+            sub_image_dets=[]
+            h = int(height / y_crops)
+            w = int(width / x_crops)
+            for j in range(y_crops):
+                for i in range(x_crops):
+                    x = int(width / x_crops * i)
+                    y = int(height / y_crops * j)
+                    print(x,y,h,w)
+                    sub_img = img[y:y+h, x:x+w]
+                    sub_img_path = file_path+"_" + str(j) + "_" + str(i) +".jpg"
+                    sub_image_paths.append(sub_img_path)
+                    cv2.imwrite(sub_img_path, sub_img)
+                    sub_image_dets.append( detect(netMain, metaMain, sub_img_path.encode("ascii"), default_thresh) )
+
+            total_det = detect(netMain, metaMain, file_path.encode("ascii"), default_thresh) 
+            html = json.dumps(total_det) 
+            html = html +'\n<br>'+ str(json_stats(json.dumps(total_det)) )
+            html= html + '\n<br><img src="'+file_path+'" width="750" alt="detection">'
+            for i in range(x_crops*y_crops):
+                html=html+ '\n<br><img src="'+sub_image_paths[i]+'" width="250" alt="detection"><br><p>'+json.dumps(sub_image_dets[i])
+            return html
+
+    return '''
+    <!doctype html>
+    <title>Upload new File9</title>
+    <h1>Upload new File9</h1>
+    <form method=post enctype=multipart/form-data>
+      <p><input type=file name=file>
+         <input type=submit value=Upload>
+    </form>
+    '''
+
+def json_stats(j):
+    objs=json.loads(j)
+    count = len(objs)
+    dets = {}
+    for obj in objs:
+       if dets.get(obj[0]):
+           dets[obj[0]]=dets[obj[0]]+1
+       else:
+           dets[obj[0]]=1
+    return dets
 
 
 #server static image
