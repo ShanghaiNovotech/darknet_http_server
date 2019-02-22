@@ -31,7 +31,7 @@ import os
 from flask import Flask, request, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 
-UPLOAD_FOLDER = 'darknet_http_server/static/'
+UPLOAD_FOLDER = 'darknet_http_server/upload/'
 ALLOWED_EXTENSIONS = set(['bmp', 'tif', 'png', 'jpg', 'jpeg', 'gif'])
 
 def sample(probs):
@@ -436,8 +436,35 @@ def upload_file():
     </form>
     '''
 
+#upload
+@app.route('/upload.json', methods=['POST'])
+def upload_json():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            return "INVALID FILE"
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit a empty part without filename
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            print(file_path)
+            file.save(file_path)
+            detections = detect(netMain, metaMain, file_path.encode("ascii"), default_thresh)
+            return json.dumps(detections) 
+
+    return "NO FILES UPLOADED."
+
+
 #server static image
 @app.route('/darknet_http_server/static/<path:path>')
-def send_js(path):
+def send_static(path):
     return send_from_directory('static', path)
+
+
+#server upload image
+@app.route('/darknet_http_server/upload/<path:path>')
+def send_upload(path):
+    return send_from_directory('upload', path)
 
