@@ -34,6 +34,7 @@ from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = 'darknet_http_server/upload/'
 ALLOWED_EXTENSIONS = set(['bmp', 'tif', 'png', 'jpg', 'jpeg', 'gif'])
+approx_dist = True
 
 def sample(probs):
     s = sum(probs)
@@ -121,7 +122,7 @@ if os.name == "nt":
             lib = CDLL(winGPUdll, RTLD_GLOBAL)
             print("Environment variables indicated a CPU run, but we didn't find `"+winNoGPUdll+"`. Trying a GPU run anyway.")
 else:
-    lib = CDLL("libdarknet.so", RTLD_GLOBAL)
+    lib = CDLL("./libdarknet.so", RTLD_GLOBAL)
 lib.network_width.argtypes = [c_void_p]
 lib.network_width.restype = c_int
 lib.network_height.argtypes = [c_void_p]
@@ -391,7 +392,7 @@ def allowed_file(filename):
 
 app = Flask(__name__)
 performDetect()
-default_thresh = 0.15
+default_thresh = 0.25
 
 #testing if works!
 #imagePath="./data/dog.jpg"
@@ -429,18 +430,28 @@ def upload_file():
 
             #annotate
             img = cv2.imread(file_path)
+            img_height, img_width, img_ch = img.shape
+            if(img_height > img_width):
+                img_length = img_height
+            else:
+                img_length = img_width
+
             for det in detections:
                 print(json.dumps(det))
                 x0 = int(det[2][0] - det[2][2] / 2)
                 x1 = int(det[2][0] + det[2][2] / 2)
                 y0 = int(det[2][1] - det[2][3] / 2)
                 y1 = int(det[2][1] + det[2][3] / 2)
-                cv2.rectangle(img,(x0, y0), (x1,y1),(0,255,0),2)
-                cv2.putText(img, det[0] +" "+ str(int(det[1]*100))+"%", (x0,y0+24) ,0,1,(0,255,0))
+                cv2.rectangle(img,(x0, y0), (x1,y1),(0,255,0),1)
+                annotation = det[0] +" "+ str(int(det[1]*100))+"%" 
+                if approx_dist:
+                    annotation = annotation+", "+str(int(2.0/(det[2][2]/float(img_length)))) + "m"
+
+                cv2.putText(img, annotation, (x0,y0+12),cv2.FONT_HERSHEY_PLAIN,1,(230,230,230),1)
             
             cv2.imwrite(file_path,img)
 
-            return res +"\n"+ image_html
+            return res + str(img_height) + " " + str(img_width)  + "\n"+ image_html
 
     return '''
     <!doctype html>
