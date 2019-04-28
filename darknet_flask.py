@@ -35,6 +35,7 @@ from werkzeug.utils import secure_filename
 UPLOAD_FOLDER = 'darknet_http_server/upload/'
 ALLOWED_EXTENSIONS = set(['bmp', 'tif', 'png', 'jpg', 'jpeg', 'gif'])
 approx_dist = True
+crop_person = True
 
 def sample(probs):
     s = sum(probs)
@@ -398,7 +399,9 @@ default_thresh = 0.25
 #imagePath="./data/dog.jpg"
 #detections = detect(netMain, metaMain, imagePath.encode("ascii"), default_thresh)
 #print("print " + json.dumps(detections))
- 
+def crop_person(img):
+    return ""
+
 
 #root
 @app.route('/')
@@ -422,7 +425,6 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file_path = os.path.join(UPLOAD_FOLDER, filename)
-            print(file_path)
             file.save(file_path)
             detections = detect(netMain, metaMain, file_path.encode("ascii"), default_thresh)
             res = '<pre>' + json.dumps(detections) +'</pre>'
@@ -436,7 +438,11 @@ def upload_file():
             else:
                 img_length = img_width
 
+            idx=0
+            crop_html =""
+            img2 = img.copy()
             for det in detections:
+                idx += 1 
                 print(json.dumps(det))
                 x0 = int(det[2][0] - det[2][2] / 2)
                 x1 = int(det[2][0] + det[2][2] / 2)
@@ -444,14 +450,24 @@ def upload_file():
                 y1 = int(det[2][1] + det[2][3] / 2)
                 cv2.rectangle(img,(x0, y0), (x1,y1),(0,255,0),1)
                 annotation = det[0] +" "+ str(int(det[1]*100))+"%" 
-                if approx_dist:
+                if approx_dist and det[0]=="person":
                     annotation = annotation+", "+str(int(2.0/(det[2][2]/float(img_length)))) + "m"
+
+                if crop_person and det[0]=="person":
+                    crop_img = img2[y0:y1, x0:x1].copy()
+                    crop_fp= file_path+str(idx)+".png"
+                    cv2.imwrite(crop_fp, crop_img)
+                    crop_html += '<img src="'+crop_fp+'" alt="crop">'
+
 
                 cv2.putText(img, annotation, (x0,y0+12),cv2.FONT_HERSHEY_PLAIN,1,(230,230,230),1)
             
             cv2.imwrite(file_path,img)
 
-            return res + str(img_height) + " " + str(img_width)  + "\n"+ image_html
+            if crop_person:
+                image_html += crop_html
+
+            return res + image_html
 
     return '''
     <!doctype html>
