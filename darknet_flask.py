@@ -253,6 +253,7 @@ def detect_image(net, meta, im, thresh=.5, hier_thresh=.5, nms=.45, debug= False
     pnum = pointer(num)
     if debug: print("Assigned pnum")
     predict_image(net, im)
+    #print("c2h2: image shape:", im.shape)
     if debug: print("did prediction")
     #dets = get_network_boxes(net, custom_image_bgr.shape[1], custom_image_bgr.shape[0], thresh, hier_thresh, None, 0, pnum, 0) # OpenCV
     dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum, 0)
@@ -390,12 +391,12 @@ def allowed_file(filename):
 
 app = Flask(__name__)
 performDetect()
-default_thresh = 0.25
+default_thresh = 0.15
 
 #testing if works!
-imagePath="./data/dog.jpg"
-detections = detect(netMain, metaMain, imagePath.encode("ascii"), default_thresh)
-print("print " + json.dumps(detections))
+#imagePath="./data/dog.jpg"
+#detections = detect(netMain, metaMain, imagePath.encode("ascii"), default_thresh)
+#print("print " + json.dumps(detections))
  
 
 #root
@@ -425,6 +426,20 @@ def upload_file():
             detections = detect(netMain, metaMain, file_path.encode("ascii"), default_thresh)
             res = '<pre>' + json.dumps(detections) +'</pre>'
             image_html='<img src="'+file_path+'" alt="detection">'
+
+            #annotate
+            img = cv2.imread(file_path)
+            for det in detections:
+                print(json.dumps(det))
+                x0 = int(det[2][0] - det[2][2] / 2)
+                x1 = int(det[2][0] + det[2][2] / 2)
+                y0 = int(det[2][1] - det[2][3] / 2)
+                y1 = int(det[2][1] + det[2][3] / 2)
+                cv2.rectangle(img,(x0, y0), (x1,y1),(0,255,0),2)
+                cv2.putText(img, det[0] +" "+ str(int(det[1]*100))+"%", (x0,y0+24) ,0,1,(0,255,0))
+            
+            cv2.imwrite(file_path,img)
+
             return res +"\n"+ image_html
 
     return '''
