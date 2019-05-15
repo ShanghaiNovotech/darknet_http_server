@@ -8,6 +8,9 @@ import numpy as np
 import time
 import darknet
 
+process_fps = 0.3
+
+
 def convertBack(x, y, w, h):
     xmin = int(round(x - (w / 2)))
     xmax = int(round(x + (w / 2)))
@@ -60,7 +63,11 @@ def get_film_det_csv(film_det_freqs):
             film_det_freq_csv[i].append(film_det_freqs[i].get(key,0))
             
     print2DMatrix(film_det_keys, film_det_freq_csv)
+    print(getCSV(film_det_keys, film_det_freq_csv))
     return film_det_freq_csv
+
+def getCSV(header, matrix):
+    return ",".join(header) +"\n"+ "\n".join([",".join([str(itm) for itm in row]) for row in matrix])
 
 netMain = None
 metaMain = None
@@ -123,7 +130,6 @@ def YOLO():
     #print("Frames per second using video.get(cv2.cv.CV_CAP_PROP_FPS): {0}".format(fps))
 
     processed_time_sec= 0
-    process_fps = 0.1
 
     film_det_freqs=[]
     while True:
