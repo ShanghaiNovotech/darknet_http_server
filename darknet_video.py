@@ -15,19 +15,21 @@ def convertBack(x, y, w, h):
     ymax = int(round(y + (h / 2)))
     return xmin, ymin, xmax, ymax
 
-
-def cvDrawSummary(detections, img):
+def detStats(detections):
     dets=[]
     dets = [item[0] for item in detections]
     freqs = {i:dets.count(i) for i in set(dets)}
+    return freqs
+
+def cvDrawSummary(freqs, img):
     for key, value in freqs.items():
         if key.decode()=="person":
             print_str= "PERSON " + str(value)
             cv2.putText(img, print_str, (5, 20) ,  cv2.FONT_HERSHEY_SIMPLEX, 0.5, [255, 255, 0], 2)
+    return img
 
 
 def cvDrawBoxes(detections, img):
-    cvDrawSummary(detections, img)
     for detection in detections:
         x, y, w, h = detection[2][0],\
             detection[2][1],\
@@ -131,9 +133,12 @@ def YOLO():
 
         detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
         image = cvDrawBoxes(detections, frame_resized)
+        freqs = detStats(detections)
+        image = cvDrawSummary(freqs, image)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         out.write(image)
         print("File: "+ str(round(time_sec,2))+" sec. Frame proc time: " + str(round(time.time()-prev_time,3)) + " sec.")
+        print(detections)
         cv2.imshow('Demo', image)
         cv2.waitKey(3)
     cap.release()
