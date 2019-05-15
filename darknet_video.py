@@ -18,12 +18,12 @@ def convertBack(x, y, w, h):
 def detStats(detections):
     dets=[]
     dets = [item[0] for item in detections]
-    freqs = {i:dets.count(i) for i in set(dets)}
+    freqs = {i.decode():dets.count(i) for i in set(dets)}
     return freqs
 
 def cvDrawSummary(freqs, img):
     for key, value in freqs.items():
-        if key.decode()=="person":
+        if key=="person":
             print_str= "PERSON " + str(value)
             cv2.putText(img, print_str, (5, 20) ,  cv2.FONT_HERSHEY_SIMPLEX, 0.5, [255, 255, 0], 2)
     return img
@@ -47,6 +47,20 @@ def cvDrawBoxes(detections, img):
                     [0, 255, 0], 2)
     return img
 
+def print2DMatrix(header, matrix):
+    print(''.join(['{:10}'.format(item) for item in header]))
+    print('\n'.join([''.join(['{:10}'.format(str(item)) for item in row]) for row in matrix]))
+
+def get_film_det_csv(film_det_freqs):
+    film_det_keys =set([item for sublist in film_det_freqs for item in sublist])
+    film_det_freq_csv=[]
+    for i in range(len(film_det_freqs)):
+        film_det_freq_csv.append([])
+        for key in film_det_keys:
+            film_det_freq_csv[i].append(film_det_freqs[i].get(key,0))
+            
+    print2DMatrix(film_det_keys, film_det_freq_csv)
+    return film_det_freq_csv
 
 netMain = None
 metaMain = None
@@ -110,6 +124,8 @@ def YOLO():
 
     processed_time_sec= 0
     process_fps = 0.1
+
+    film_det_freqs=[]
     while True:
         prev_time = time.time()
         ret, frame_read = cap.read()
@@ -138,11 +154,14 @@ def YOLO():
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         out.write(image)
         print("File: "+ str(round(time_sec,2))+" sec. Frame proc time: " + str(round(time.time()-prev_time,3)) + " sec.")
-        print(detections)
+        film_det_freqs.append(freqs)
         cv2.imshow('Demo', image)
         cv2.waitKey(3)
+
+    get_film_det_csv(film_det_freqs)
     cap.release()
     out.release()
 
 if __name__ == "__main__":
     YOLO()
+
