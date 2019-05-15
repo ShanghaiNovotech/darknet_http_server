@@ -54,9 +54,9 @@ altNames = None
 def YOLO():
 
     global metaMain, netMain, altNames
-    configPath = "../cfg/yolov3.cfg"
-    weightPath = "../yolov3.weights"
-    metaPath = "../cfg/coco.data"
+    configPath = "./cfg/yolov3.cfg"
+    weightPath = "./yolov3.weights"
+    metaPath = "./cfg/coco.data"
     if not os.path.exists(configPath):
         raise ValueError("Invalid config path `" +
                          os.path.abspath(configPath)+"`")
@@ -101,11 +101,26 @@ def YOLO():
     print("Starting the YOLO loop...")
 
     # Create an image we reuse for each detect
-    darknet_image = darknet.make_image(darknet.network_width(netMain),
-                                    darknet.network_height(netMain),3)
+    darknet_image = darknet.make_image(darknet.network_width(netMain), darknet.network_height(netMain),3)
+ #   fps = cap.get(cv2.cv.CV_CAP_PROP_FPS)
+    #fps = cap.get(cv2.CAP_PROP_FPS)
+    #print("Frames per second using video.get(cv2.cv.CV_CAP_PROP_FPS): {0}".format(fps))
+
+    processed_time_sec= 0
+    process_fps = 0.1
     while True:
         prev_time = time.time()
         ret, frame_read = cap.read()
+        if not ret:
+            break
+        time_sec=(cap.get(cv2.CAP_PROP_POS_MSEC)/1000.0)
+        
+        #skip frames 
+        if processed_time_sec < time_sec:
+            processed_time_sec += 1/process_fps
+        else:
+            continue
+
         frame_rgb = cv2.cvtColor(frame_read, cv2.COLOR_BGR2RGB)
         frame_resized = cv2.resize(frame_rgb,
                                    (darknet.network_width(netMain),
@@ -118,7 +133,7 @@ def YOLO():
         image = cvDrawBoxes(detections, frame_resized)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         out.write(image)
-        print(1/(time.time()-prev_time))
+        print(str(time_sec)+"sec. " + str(1/(time.time()-prev_time)))
         cv2.imshow('Demo', image)
         cv2.waitKey(3)
     cap.release()
