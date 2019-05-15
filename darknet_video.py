@@ -133,7 +133,7 @@ def YOLO():
         image = cvDrawBoxes(detections, frame_resized)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         out.write(image)
-        print(str(time_sec)+"sec. " + str(1/(time.time()-prev_time)))
+        print("File: "+ str(round(time_sec,2))+" sec. Frame proc time: " + str(round(time.time()-prev_time,3)) + " sec.")
         cv2.imshow('Demo', image)
         cv2.waitKey(3)
     cap.release()
