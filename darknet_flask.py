@@ -29,13 +29,19 @@ import os
 import json
 import os
 import cv2
-from flask import Flask, request, redirect, url_for, send_from_directory
+import time
+import shutil
+from flask_bootstrap import Bootstrap
+from flask import Flask, render_template, request, request, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
+
 
 UPLOAD_FOLDER = 'darknet_http_server/upload/'
 ALLOWED_EXTENSIONS = set(['bmp', 'tif', 'png', 'jpg', 'jpeg', 'gif'])
 approx_dist = True
 crop_person = True
+
+
 
 def sample(probs):
     s = sum(probs)
@@ -392,6 +398,7 @@ def allowed_file(filename):
 
 
 app = Flask(__name__)
+Bootstrap(app)
 performDetect()
 default_thresh = 0.25
 
@@ -406,7 +413,24 @@ def crop_person(img):
 #root
 @app.route('/')
 def hello_world():
-    return '<h1>Artificial Neural Net Loaded.</h1><br><a href="/upload">upload a file to detection.</a>'
+    return render_template('index.html', value=0)
+    #return '<h1>Artificial Neural Net Loaded.</h1><br><a href="/upload">upload a file to detection.</a>'
+
+
+@app.route('/api/health')
+def health():
+    return ""
+
+#return urls
+@app.route('/api/latest_images')
+def latest_images():
+    return ""
+
+#serve upload files
+@app.route('/upload/<path:path>')
+def send_js(path):
+    return send_from_directory('upload', path)
+
 
 #upload
 @app.route('/upload', methods=['GET','POST'])
@@ -423,8 +447,12 @@ def upload_file():
             flash('No selected file')
             return redirect(request.url)
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
+            #filename = secure_filename(file.filename)
+            date_string = time.strftime("%Y%m%d-%H%M%S")
+            filename =  "cam0_"+date_string+".jpg" 
+            latest_fn = "cam0_latest.jpg"
             file_path = os.path.join(UPLOAD_FOLDER, filename)
+            latest_file_path = os.path.join(UPLOAD_FOLDER, latest_fn)
             file.save(file_path)
             detections = detect(netMain, metaMain, file_path.encode("ascii"), default_thresh)
             res = '<pre>' + json.dumps(detections) +'</pre>'
@@ -463,6 +491,7 @@ def upload_file():
                 cv2.putText(img, annotation, (x0,y0+12),cv2.FONT_HERSHEY_PLAIN,1,(230,230,230),1)
             
             cv2.imwrite(file_path,img)
+            shutil.copyfile(file_path, latest_file_path)
 
             if crop_person:
                 image_html += crop_html

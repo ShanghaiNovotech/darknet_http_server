@@ -1,0 +1,86 @@
+body {
+  padding-top: 50px;
+}
+.starter-template {
+  padding: 40px 15px;
+  text-align: center;
+}
+
+/* Split the screen in half */
+.split {
+  height: 100%;
+  width: 50%;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  overflow-x: hidden;
+  padding-top: 60px;
+}
+
+/* Control the left side */
+.left {
+  left: 0;
+  width:70%;
+  background-color: #111;
+}
+
+/* Control the right side */
+.right {
+  right: 0;
+  width: 30%;
+  background-color: #AAA;
+}
+
+/* If you want the content centered horizontally and vertically */
+.centered {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+/* Style the image inside the centered container, if needed */
+.centered img {
+  /*width: 150px;*/
+}
+
+.form-control {
+    display: block;
+    width: 60px;
+}
+
+#toolbar_form {
+  margin-bottom: 10px;
+}
+
+.category_select {
+  margin-bottom: 8px;
+}
+
+#page_idx {
+  width: 60px;
+  text-align: center;
+}
+
+.thumbs {
+  margin-right: 2px;
+  cursor: pointer;
+}
+
+.thumbs:hover {
+  border: 1px solid #BDBDBD;
+}
+
+.thumbs.active{
+  border: 1px solid red;
+}
+
+#infobox {
+  overflow: scroll;
+  height: 250px;
+}
+
+.properties_bar {
+  padding: 10px;
+}
