@@ -2,6 +2,7 @@ import requests
 import time
 
 url = 'http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0'
+url = 'https://picsum.photos/536/354'
 SRV_URL='http://localhost:5000/upload'
 
 def fetech_image_and_post(url):
@@ -17,7 +18,7 @@ def fetech_image_and_post(url):
 
     #post fn to server
     files = {'file': open(fn, 'rb')}
-    res2 = requests.post(SRV_URL, files=files)
+    res2 = requests.post(SRV_URL, files=files, data={"cam_id":1, "cam_name":"random"})
     if res2.status_code == 200:
         with open(fn2, 'wb') as f:
             #f.write(res2.content)

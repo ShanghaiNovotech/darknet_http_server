@@ -53,11 +53,10 @@ app.config.update(config)
 
 Bootstrap(app)
 db=SQLAlchemy(app)
-db.create_all()
 
-###functions and classes
+#db classes
 class Detection(db.Model):
-    __tablename__ = 'test'
+    #__tablename__ = 'detection'
     id = db.Column("id", db.Integer, primary_key=True)
     cam_name = db.Column("cam_name", db.String(16))
     pic_path = db.Column("pic_path", db.String(64))
@@ -67,7 +66,11 @@ class Detection(db.Model):
     def __repr__(self):
         return '<Detection %r>' % self.cam_name
 
+db.create_all()
+db.session.commit()
 
+
+###functions and classes
 def sample(probs):
     s = sum(probs)
     probs = [a/s for a in probs]
@@ -198,7 +201,7 @@ def detect_image(net, meta, im, thresh=.5, hier_thresh=.5, nms=.45, debug= False
     if debug: print("freed detections")
     return res
 
-def performDetect(imagePath="./data/dog.jpg", thresh= 0.25, configPath = "./cfg/yolov3.cfg", weightPath = "./yolov3.weights", metaPath= "./cfg/coco.data", showImage= False, makeImageOnly = False, initOnly= False):
+def performDetect(imagePath="./data/dog.jpg", thresh= 0.25, configPath = "../cfg/yolov3.cfg", weightPath = "../yolov3.weights", metaPath= "../cfg/coco_http.data", showImage= False, makeImageOnly = False, initOnly= False):
     """
     Convenience function to handle the detection and returns of objects.
 
@@ -405,8 +408,8 @@ def upload_file():
             return redirect(request.url)
 
         file = request.files['file']
-        _cam_id = request.get("cam_id")
-        _cam_name = request.get("cam_name")
+        _cam_id = request.args.get("cam_id")
+        _cam_name = request.args.get("cam_name")
 
         # if user does not select file, browser also
         # submit a empty part without filename
@@ -422,8 +425,8 @@ def upload_file():
             json_detections=json.dumps(detections)
 
             #db save
-            obj=Detection(cam_id=_cam_id, cam_name=_cam_name, det=json_detections, pic_path=file_path)
-            db.session.add(det)   
+            obj=Detection(cam_name=_cam_name, det=json_detections, pic_path=file_path)
+            db.session.add(obj)   
             db.session.commit()
 
             #html processing
