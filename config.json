@@ -1,12 +1,20 @@
 {
     "DEBUG": true,
     "SECRET_KEY": "development key",
+    "SERVER_URL": "http://localhost:5000",
+    "SQLALCHEMY_DATABASE_URI": "sqlite:////Users/c2h2/darknet_server.db",
+    "SQLALCHEMY_TRACK_MODIFICATIONS": false,
     "LOAD_NNET": false,
-    "UPLOAD_FOLDER": "darknet_http_server/upload/",
+    "UPLOAD_FOLDER": "upload/",
     "hasGPU": true,
     "approx_dist": true,
     "crop_person": true,
     "default_thresh": 0.25,
     "_default_thresh": "#default threshold for detection",
-    "ALLOWED_EXTENSIONS": ["bmp", "tif", "png", "jpg", "jpeg", "gif"]
+    "ALLOWED_EXTENSIONS": ["bmp", "tif", "png", "jpg", "jpeg", "gif"],
+    "camera_names": ["cam0","cam1"],
+    "camera_types": ["NORMAL","NORMAL"],
+    "_camera_types": ["NORMAL","DOOR","OTHER"],
+    "camera_urls":[ "http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0",
+    				"http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0"]
 }

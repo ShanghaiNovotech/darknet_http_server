@@ -31,9 +31,12 @@ import os
 import cv2
 import time
 import shutil
+import datetime
 from flask_bootstrap import Bootstrap
 from flask import Flask, render_template, request, request, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
+from flask_sqlalchemy import SQLAlchemy
+
 
 #some global names
 netMain = None
@@ -42,14 +45,29 @@ altNames = None
 
 #init app
 app = Flask(__name__)
-Bootstrap(app)
 
 #load conf
-with open('darknet_http_server/config.json') as f:
+with open('config.json') as f:
     config = json.load(f)
 app.config.update(config)
 
+Bootstrap(app)
+db=SQLAlchemy(app)
+db.create_all()
+
 ###functions and classes
+class Detection(db.Model):
+    __tablename__ = 'test'
+    id = db.Column("id", db.Integer, primary_key=True)
+    cam_name = db.Column("cam_name", db.String(16))
+    pic_path = db.Column("pic_path", db.String(64))
+    det = db.Column('det', db.Unicode)
+    created_at = db.Column('created_at', db.DateTime, default=datetime.datetime.utcnow)
+
+    def __repr__(self):
+        return '<Detection %r>' % self.cam_name
+
+
 def sample(probs):
     s = sum(probs)
     probs = [a/s for a in probs]
@@ -272,7 +290,7 @@ def allowed_file(filename):
 
 
 if app.config['LOAD_NNET']:
-    lib = CDLL("./libdarknet.so", RTLD_GLOBAL)
+    lib = CDLL("../libdarknet.so", RTLD_GLOBAL)
     lib.network_width.argtypes = [c_void_p]
     lib.network_width.restype = c_int
     lib.network_height.argtypes = [c_void_p]
@@ -385,22 +403,31 @@ def upload_file():
         if 'file' not in request.files:
             flash('No file part')
             return redirect(request.url)
+
         file = request.files['file']
+        _cam_id = request.get("cam_id")
+        _cam_name = request.get("cam_name")
+
         # if user does not select file, browser also
         # submit a empty part without filename
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
         if file and allowed_file(file.filename):
-            #filename = secure_filename(file.filename)
             date_string = time.strftime("%Y%m%d-%H%M%S")
-            filename =  "cam0_"+date_string+".jpg" 
-            latest_fn = "cam0_latest.jpg"
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            latest_file_path = os.path.join(app.config['UPLOAD_FOLDER'], latest_fn)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], "cam0_"+date_string+".jpg" )
+            latest_file_path = os.path.join(app.config['UPLOAD_FOLDER'], "cam0_latest.jpg")
             file.save(file_path)
             detections = detect(netMain, metaMain, file_path.encode("ascii"), app.config['default_thresh'])
-            res = '<pre>' + json.dumps(detections) +'</pre>'
+            json_detections=json.dumps(detections)
+
+            #db save
+            obj=Detection(cam_id=_cam_id, cam_name=_cam_name, det=json_detections, pic_path=file_path)
+            db.session.add(det)   
+            db.session.commit()
+
+            #html processing
+            res = '<pre>' + json_detections +'</pre>'
             image_html='<img src="'+file_path+'" alt="detection">'
 
             #annotate
