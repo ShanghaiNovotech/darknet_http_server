@@ -1,0 +1,12 @@
+{
+    "DEBUG": true,
+    "SECRET_KEY": "development key",
+    "LOAD_NNET": false,
+    "UPLOAD_FOLDER": "darknet_http_server/upload/",
+    "hasGPU": true,
+    "approx_dist": true,
+    "crop_person": true,
+    "default_thresh": 0.25,
+    "_default_thresh": "#default threshold for detection",
+    "ALLOWED_EXTENSIONS": ["bmp", "tif", "png", "jpg", "jpeg", "gif"]
+}

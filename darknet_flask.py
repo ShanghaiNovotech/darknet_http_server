@@ -35,22 +35,21 @@ from flask_bootstrap import Bootstrap
 from flask import Flask, render_template, request, request, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
 
-
-UPLOAD_FOLDER = 'darknet_http_server/upload/'
-ALLOWED_EXTENSIONS = set(['bmp', 'tif', 'png', 'jpg', 'jpeg', 'gif'])
-approx_dist = True
-crop_person = True
-hasGPU = True
-LOAD_NNET=False
-
+#some global names
 netMain = None
 metaMain = None
 altNames = None
 
-#default threshold for detection
-default_thresh = 0.25
+#init app
+app = Flask(__name__)
+Bootstrap(app)
 
+#load conf
+with open('darknet_http_server/config.json') as f:
+    config = json.load(f)
+app.config.update(config)
 
+###functions and classes
 def sample(probs):
     s = sum(probs)
     probs = [a/s for a in probs]
@@ -269,10 +268,10 @@ def performDetect(imagePath="./data/dog.jpg", thresh= 0.25, configPath = "./cfg/
 #allowd upload files
 def allowed_file(filename):
     return '.' in filename and \
-        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+        filename.rsplit('.', 1)[1].lower() in set(app.config['ALLOWED_EXTENSIONS'])
 
 
-if LOAD_NNET:
+if app.config['LOAD_NNET']:
     lib = CDLL("./libdarknet.so", RTLD_GLOBAL)
     lib.network_width.argtypes = [c_void_p]
     lib.network_width.restype = c_int
@@ -287,7 +286,7 @@ if LOAD_NNET:
     predict.argtypes = [c_void_p, POINTER(c_float)]
     predict.restype = POINTER(c_float)
 
-    if hasGPU:
+    if app.config['hasGPU']:
         set_gpu = lib.cuda_set_device
         set_gpu.argtypes = [c_int]
 
@@ -351,19 +350,12 @@ if LOAD_NNET:
     predict_image.argtypes = [c_void_p, IMAGE]
     predict_image.restype = POINTER(c_float)
 
-
-app = Flask(__name__)
-Bootstrap(app)
-if LOAD_NNET:
     performDetect()
-
 
 #testing if works!
 #imagePath="./data/dog.jpg"
-#detections = detect(netMain, metaMain, imagePath.encode("ascii"), default_thresh)
+#detections = detect(netMain, metaMain, imagePath.encode("ascii"), app.config['default_thresh'])
 #print("print " + json.dumps(detections))
-def crop_person(img):
-    return ""
 
 #root
 @app.route('/')
@@ -404,10 +396,10 @@ def upload_file():
             date_string = time.strftime("%Y%m%d-%H%M%S")
             filename =  "cam0_"+date_string+".jpg" 
             latest_fn = "cam0_latest.jpg"
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            latest_file_path = os.path.join(UPLOAD_FOLDER, latest_fn)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            latest_file_path = os.path.join(app.config['UPLOAD_FOLDER'], latest_fn)
             file.save(file_path)
-            detections = detect(netMain, metaMain, file_path.encode("ascii"), default_thresh)
+            detections = detect(netMain, metaMain, file_path.encode("ascii"), app.config['default_thresh'])
             res = '<pre>' + json.dumps(detections) +'</pre>'
             image_html='<img src="'+file_path+'" alt="detection">'
 
@@ -431,10 +423,10 @@ def upload_file():
                 y1 = int(det[2][1] + det[2][3] / 2)
                 cv2.rectangle(img,(x0, y0), (x1,y1),(0,255,0),1)
                 annotation = det[0] +" "+ str(int(det[1]*100))+"%" 
-                if approx_dist and det[0]=="person":
+                if app.config['approx_dist'] and det[0]=="person":
                     annotation = annotation+", "+str(int(2.0/(det[2][2]/float(img_length)))) + "m"
 
-                if crop_person and det[0]=="person":
+                if app.config['crop_person'] and det[0]=="person":
                     crop_img = img2[y0:y1, x0:x1].copy()
                     crop_fp= file_path+str(idx)+".png"
                     cv2.imwrite(crop_fp, crop_img)
@@ -446,7 +438,7 @@ def upload_file():
             cv2.imwrite(file_path,img)
             shutil.copyfile(file_path, latest_file_path)
 
-            if crop_person:
+            if app.config['crop_person']:
                 image_html += crop_html
 
             return res + image_html
@@ -473,10 +465,10 @@ def upload_json():
         # submit a empty part without filename
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             print(file_path)
             file.save(file_path)
-            detections = detect(netMain, metaMain, file_path.encode("ascii"), default_thresh)
+            detections = detect(netMain, metaMain, file_path.encode("ascii"), app.config['default_thresh'])
             return json.dumps(detections) 
 
     return "NO FILES UPLOADED."
@@ -498,7 +490,7 @@ def upload9():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             print(file_path)
             file.save(file_path)
             
@@ -525,9 +517,9 @@ def upload9():
                     sub_img_path = file_path+"_" + str(j) + "_" + str(i) +".jpg"
                     sub_image_paths.append(sub_img_path)
                     cv2.imwrite(sub_img_path, sub_img)
-                    sub_image_dets.append( detect(netMain, metaMain, sub_img_path.encode("ascii"), default_thresh) )
+                    sub_image_dets.append( detect(netMain, metaMain, sub_img_path.encode("ascii"), app.config['default_thresh']) )
 
-            total_det = detect(netMain, metaMain, file_path.encode("ascii"), default_thresh) 
+            total_det = detect(netMain, metaMain, file_path.encode("ascii"), app.config['default_thresh']) 
             html = json.dumps(total_det) 
             html = html +'\n<br>'+ str(json_stats(json.dumps(total_det)) )
             html= html + '\n<br><img src="'+file_path+'" width="750" alt="detection">'
