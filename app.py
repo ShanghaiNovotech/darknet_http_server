@@ -68,6 +68,9 @@ class CAMDetection(db.Model):
     def __repr__(self):
         return '<Detection %r>' % self.cam_name
 
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 db.create_all()
 db.session.commit()
 
@@ -387,8 +390,12 @@ def hello_world():
 
 @app.route('/api/camera_detection')
 def camera_detections():
-    result = CAMDetection.query.all()
-    return jsonify(result)
+    results=db.session.query(CAMDetection).order_by(CAMDetection.id.desc()).limit(100).all()
+    ret = []
+    for cam in results:
+        ret.append(cam.as_dict())
+
+    return jsonify(ret)
 
 @app.route('/api/health')
 def health():
