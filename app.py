@@ -56,9 +56,10 @@ Bootstrap(app)
 db=SQLAlchemy(app)
 
 #db classes
-class Detection(db.Model):
+class CAMDetection(db.Model):
     #__tablename__ = 'detection'
     id = db.Column("id", db.Integer, primary_key=True)
+    cam_id   = db.Column("cam_id", db.Integer)
     cam_name = db.Column("cam_name", db.String(16))
     pic_path = db.Column("pic_path", db.String(64))
     det = db.Column('det', db.Unicode)
@@ -384,6 +385,11 @@ if app.config['LOAD_NNET']:
 def hello_world():
     return render_template('index.html', value=0)
 
+@app.route('/api/camera_detection')
+def camera_detections():
+    result = CAMDetection.query.all()
+    return jsonify(result)
+
 @app.route('/api/health')
 def health():
     return ""
@@ -426,7 +432,7 @@ def upload_file():
             json_detections=json.dumps(detections)
 
             #db save
-            obj=Detection(cam_name=_cam_name, det=json_detections, pic_path=file_path)
+            obj=CAMDetection(cam_name=_cam_name, det=json_detections, pic_path=file_path)
             db.session.add(obj)   
             db.session.commit()
 

@@ -103,9 +103,12 @@ var app = new Vue({
 setInterval(function(){
   //app.imageSRC0="upload/cam0_latest.jpg?"+new Date().getTime();
   $.getJSON("/api/cameras", function(response_data){
-      app.cameras=response_data.cameras;
-    });
-    
+    app.cameras=response_data.cameras;
+  });
+
+  $.getJSON("/api/camera_detection", function(response_data){
+    console.log(response_data);
+  });
 },2000);
 
 </script>
