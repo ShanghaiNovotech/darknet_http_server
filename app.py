@@ -32,6 +32,7 @@ import cv2
 import time
 import shutil
 import datetime
+from flask import jsonify
 from flask_bootstrap import Bootstrap
 from flask import Flask, render_template, request, request, redirect, url_for, send_from_directory
 from werkzeug.utils import secure_filename
@@ -482,6 +483,10 @@ def upload_file():
          <input type=submit value=Upload>
     </form>
     '''
+
+@app.route('/api/cameras')
+def api_cameras():
+    return jsonify(({"cameras":app.config["cameras"]}))
 
 #upload
 @app.route('/upload.json', methods=['POST'])

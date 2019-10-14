@@ -4,7 +4,7 @@
     "SERVER_URL": "http://localhost:5000",
     "SQLALCHEMY_DATABASE_URI": "sqlite:///darknet_server.db",
     "SQLALCHEMY_TRACK_MODIFICATIONS": false,
-    "LOAD_NNET": true,
+    "LOAD_NNET": false,
     "UPLOAD_FOLDER": "upload/",
     "hasGPU": true,
     "approx_dist": true,
@@ -12,9 +12,13 @@
     "default_thresh": 0.25,
     "_default_thresh": "#default threshold for detection",
     "ALLOWED_EXTENSIONS": ["bmp", "tif", "png", "jpg", "jpeg", "gif"],
+    "cameras": [{"id":0, "name":"cam00", "method":"HTTP","type":"NORMAL","uri":"http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0"},
+    			{"id":1, "name":"dummy", "method":"HTTP","type":"NORMAL","uri":"https://picsum.photos/536/354","chart":""}
+			],
     "camera_names": ["cam0","cam1"],
+    "camera_methods": ["HTTP","HTTP"],
     "camera_types": ["NORMAL","NORMAL"],
     "_camera_types": ["NORMAL","DOOR","OTHER"],
-    "camera_urls":[ "http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0",
+    "camera_uris":[ "http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0",
     				"http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0"]
 }

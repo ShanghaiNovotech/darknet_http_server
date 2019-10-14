@@ -10,12 +10,17 @@ Demo App
 {{super()}}
 <link rel="stylesheet" href="{{url_for('.static', filename='starter-template.css')}}">
     
+
 <script src="/static/jquery.min.js"></script>
-<script src="/static/bootstrap.min.js"></script>
-<script src="/static/md5.min.js"></script>
 <script src="/static/jquery.cookie.js"></script>
 
+<script src="/static/bootstrap.min.js"></script>
+<!--
+<script src="/static/md5.min.js"></script>
+-->
+<script src="http://cdn.jsdelivr.net/vue/2.0.3/vue.js"></script>
 <script>
+  /*
 $(function(){
   console.log($("#camera0").attr('src'));
 }); // document.ready
@@ -23,6 +28,9 @@ $(function(){
 setInterval(function(){
     $("#camera0").attr("src", "upload/cam0_latest.jpg?"+new Date().getTime());
 },2000);
+*/
+
+
 
 </script>
 
@@ -49,12 +57,56 @@ setInterval(function(){
   </div>
 </nav>
 
-<div class="container">
+<div class="container" id="app">
   <div class="split left">
-    <div class="cameras">
-      <img id="camera0" src="upload/cam0_latest.jpg" height=400 width=500>
+    <div class="cameras" id="cameras">
+      <div class="camera" v-for="camera in cameras"><img v-bind:src="camera.uri+'?'+new Date().getTime()" width="300" /> 
+        <!-- chart here -->
+      </div>
+      <p>[[ right_message ]]</p>
     </div>  
-  <div class="split right">
-  </div>
 </div><!-- /.container -->
+
+<script>
+  /*
+$(function(){
+  console.log($("#camera0").attr('src'));
+}); // document.ready
+
+setInterval(function(){
+    $("#camera0").attr("src", "upload/cam0_latest.jpg?"+new Date().getTime());
+},2000);
+*/
+var num_camera=1;
+
+var app = new Vue({
+  el: '#app',
+  delimiters: ['[[',']]'],
+  data: {
+    right_message: 'Hello Vue!',
+    imageSRC: "/static/default.jpg",
+    cameras: []
+
+  },
+  created:function(){
+      console.log("ASDFASDF");
+  },
+  mounted:function(){
+    var _this=this;
+    $.getJSON("/api/cameras", function(response_data){
+      _this.cameras=response_data.cameras;
+    });
+  }
+
+});
+
+setInterval(function(){
+  //app.imageSRC0="upload/cam0_latest.jpg?"+new Date().getTime();
+  $.getJSON("/api/cameras", function(response_data){
+      app.cameras=response_data.cameras;
+    });
+    
+},2000);
+
+</script>
 {% endblock %}
