@@ -422,9 +422,11 @@ def upload_file():
             return redirect(request.url)
 
         file = request.files['file']
-        _cam_id = request.args.get("cam_id")
-        _cam_name = request.args.get("cam_name")
-
+        data = json.load(request.files['data'])
+        _cam_id = data["cam_id"]
+        _cam_name = data["cam_name"]
+        print(_cam_id, _cam_name)
+        
         # if user does not select file, browser also
         # submit a empty part without filename
         if file.filename == '':
@@ -439,7 +441,7 @@ def upload_file():
             json_detections=json.dumps(detections)
 
             #db save
-            obj=CAMDetection(cam_name=_cam_name, det=json_detections, pic_path=file_path)
+            obj=CAMDetection(cam_id=_cam_id, cam_name=_cam_name, det=json_detections, pic_path=file_path)
             db.session.add(obj)   
             db.session.commit()
 

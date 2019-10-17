@@ -1,25 +1,41 @@
 import requests
 import time
 import os
+import json
 
-url = 'http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0'
-url = 'https://picsum.photos/536/354'
-SRV_URL='http://localhost:5000/upload'
+
+with open('config.json') as f:
+        config = json.load(f)
+
+CAMS=config['cameras']
+
+SRV_URL=config['UPLOAD_URL']
+print(SRV_URL)
 PID=os.getpid()
+cnt=0
 
-def fetch_n_post(url):
+def fetch_n_post(_id, name, url):
+    global cnt
     date_string = time.strftime("%Y%m%d-%H%M")
-    fn=date_string+".jpg"
-    fn="/tmp/"+str(PID)+"cam_ftech.jpg"
+    fn="/tmp/"+str(PID)+"_"+ str(name) + "_cam_ftech.jpg"
+    #print(fn)
     fn2=date_string+".txt"
     res1 = requests.get(url)
     if res1.status_code == 200:
+        print(str(cnt) + " 200 " + url)
+        cnt =  cnt + 1
         with open(fn, 'wb') as f:
             f.write(res1.content)
 
     #post fn to server
+    data = {"cam_id":_id, "cam_name":name}
     files = {'file': open(fn, 'rb')}
-    res2 = requests.post(SRV_URL, files=files, data={"cam_id":1, "cam_name":"random"})
+    files = [
+                ('file', (fn, open(fn, 'rb'), 'application/octet')),
+                ('data', ('data', json.dumps(data), 'application/json')),]
+
+    #res2 = requests.post(SRV_URL, files=files, data=json.dumps({"cam_id":_id, "cam_name":name}))
+    res2 = requests.post(SRV_URL, files=files)
     if res2.status_code == 200:
         print(res2.content)
         '''
@@ -28,11 +44,14 @@ def fetch_n_post(url):
             print(res2.content)
         '''
 
+
 while True:
-    try:
-        fetch_n_post(url)
-    except:
-        print("EXCEPTION in fetch_n_post")
-        pass
+    for cam in CAMS:
+        if cam['method']=="HTTP":
+            try:
+                fetch_n_post(cam['id'], cam['name'], cam['uri'])
+
+            except Exception as e: 
+                print(e)
 
     time.sleep(1)
