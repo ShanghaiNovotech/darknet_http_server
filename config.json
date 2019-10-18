@@ -16,6 +16,7 @@
     "cameras": [{"id":0, "name":"cam78", "method":"HTTP","type":"NORMAL","uri":"http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0"},
     			{"id":1, "name":"cam77", "method":"HTTP","type":"NORMAL","uri":"http://192.168.9.77:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0","chart":""},
     			{"id":2, "name":"cam76", "method":"HTTP","type":"NORMAL","uri":"http://192.168.9.76:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0","chart":""},
-    			{"id":3, "name":"dummy", "method":"HTTP","type":"NORMAL","uri":"https://picsum.photos/536/354","chart":""}
+    			{"id":3, "name":"cam75", "method":"HTTP","type":"NORMAL","uri":"http://192.168.9.75:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0","chart":""},
+    			{"id":4, "name":"dummy", "method":"HTTP","type":"NORMAL","uri":"https://picsum.photos/536/354","chart":""}
 			]
 }

@@ -57,10 +57,9 @@ db=SQLAlchemy(app)
 
 #db classes
 class CAMDetection(db.Model):
-    #__tablename__ = 'detection'
     id = db.Column("id", db.Integer, primary_key=True)
-    cam_id   = db.Column("cam_id", db.Integer)
-    cam_name = db.Column("cam_name", db.String(16))
+    cam_id   = db.Column("cam_id", db.Integer, index=True)
+    cam_name = db.Column("cam_name", db.String(16),index=True)
     pic_path = db.Column("pic_path", db.String(64))
     det = db.Column('det', db.Unicode)
     created_at = db.Column('created_at', db.DateTime, default=datetime.datetime.utcnow)
@@ -70,6 +69,23 @@ class CAMDetection(db.Model):
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class CAMDetectionMin(db.Model):
+     id = db.Column("id", db.Integer, nullable=False, primary_key=True, autoincrement=True)
+     cam_id   = db.Column("cam_id", db.Integer,nullable=False)
+     cam_name = db.Column("cam_name", db.String(16),index=True,nullable=False)
+     num_persons=db.Column("num_persons", db.Float,nullable=False)
+     num_luggages=db.Column("num_luggages", db.Float,nullable=False)
+     sampled_at = db.Column('sampled_at', db.DateTime,nullable=False)
+     created_at = db.Column('created_at', db.DateTime, default=datetime.datetime.utcnow)
+
+     def __repr__(self):
+        return '<Detection %r>' % self.cam_name
+
+     def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 db.create_all()
 db.session.commit()
@@ -401,6 +417,14 @@ def camera_detections():
 def health():
     return ""
 
+@app.route('/api/latest_dets/<cam_name>')
+def latest_dets(cam_name):
+    _dets=db.session.query(CAMDetectionMin).order_by(CAMDetectionMin.sampled_at.desc()).limit(100).all()
+    dets = []
+    for det in _dets:
+        dets.append(det.as_dict())
+    return jsonify(dets) 
+
 #return urls
 @app.route('/api/latest_images')
 def latest_images():
@@ -434,8 +458,8 @@ def upload_file():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             date_string = time.strftime("%Y%m%d-%H%M%S")
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], "cam0_"+date_string+".jpg" )
-            latest_file_path = os.path.join(app.config['UPLOAD_FOLDER'], "cam0_latest.jpg")
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], _cam_name+"_"+date_string+".jpg" )
+            latest_file_path = os.path.join(app.config['UPLOAD_FOLDER'],  _cam_name+"_latest.jpg")
             file.save(file_path)
             detections = detect(netMain, metaMain, file_path.encode("ascii"), app.config['default_thresh'])
             json_detections=json.dumps(detections)
