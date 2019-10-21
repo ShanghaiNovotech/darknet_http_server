@@ -90,6 +90,12 @@ class CAMDetectionMin(db.Model):
 db.create_all()
 db.session.commit()
 
+def row2dict(row):
+    d = {}
+    for column in row.__table__.columns:
+        d[column.name] = str(getattr(row, column.name))
+
+    return d
 
 ###functions and classes
 def sample(probs):
@@ -419,12 +425,30 @@ def settings():
     return render_template('settings.html', value=0)
 
 
-@app.route('/api/camera_detection')
+@app.route('/api/cameras')
+def api_cameras():
+    return jsonify(({"cameras":app.config["cameras"]}))
+
+@app.route('/api/camera_detections')
 def camera_detections():
-    results=db.session.query(CAMDetection).order_by(CAMDetection.id.desc()).limit(100).all()
+    results=CAMDetection.query.group_by(CAMDetection.cam_name).order_by(CAMDetection.cam_id.asc()).all()
     ret = []
     for cam in results:
-        ret.append(cam.as_dict())
+        cam_dict = cam.as_dict()
+        cam_dict['det'] = json.loads(cam_dict['det'])
+        num_persons=0
+        num_luggages=0
+        for elem in cam_dict['det']: 
+            if elem[0]=='person':
+                num_persons+=1
+
+            if elem[0] in ['backpack','handbag','suitcase']:
+                num_luggages+=1
+
+        cam_dict["num_persons"]=num_persons
+        cam_dict["num_luggages"]=num_luggages
+
+        ret.append(cam_dict)
 
     return jsonify(ret)
 
@@ -432,8 +456,8 @@ def camera_detections():
 def health():
     return ""
 
-@app.route('/api/latest_dets/<cam_name>')
-def latest_dets(cam_name):
+@app.route('/api/resampled_dets/<cam_name>')
+def resampled_dets(cam_name):
     _dets=db.session.query(CAMDetectionMin).filter(CAMDetectionMin.cam_name == cam_name).order_by(CAMDetectionMin.sampled_at.desc()).limit(100).all()
     dets = []
     for det in _dets:
@@ -537,10 +561,6 @@ def upload_file():
          <input type=submit value=Upload>
     </form>
     '''
-
-@app.route('/api/cameras')
-def api_cameras():
-    return jsonify(({"cameras":app.config["cameras"]}))
 
 #upload
 @app.route('/upload.json', methods=['POST'])

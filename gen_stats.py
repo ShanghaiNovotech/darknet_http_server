@@ -53,7 +53,7 @@ for x, new_df in data.groupby("cam_id"):
             if elem[0] == 'person':
                 num_person+=1
 
-            if elem[0] in ['backpack','handbag']:
+            if elem[0] in ['backpack','handbag', 'suitcase']:
                 num_luggage+=1
 
         num_persons.append(num_person)            
