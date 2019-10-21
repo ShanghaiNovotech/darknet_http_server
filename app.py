@@ -404,6 +404,21 @@ if app.config['LOAD_NNET']:
 def hello_world():
     return render_template('index.html', value=0)
 
+@app.route('/stats')
+def stats():
+    return render_template('stats.html', value=0)
+
+
+@app.route('/devices')
+def devices():
+    return render_template('devices.html', value=0)
+
+
+@app.route('/settings')
+def settings():
+    return render_template('settings.html', value=0)
+
+
 @app.route('/api/camera_detection')
 def camera_detections():
     results=db.session.query(CAMDetection).order_by(CAMDetection.id.desc()).limit(100).all()
@@ -419,7 +434,7 @@ def health():
 
 @app.route('/api/latest_dets/<cam_name>')
 def latest_dets(cam_name):
-    _dets=db.session.query(CAMDetectionMin).order_by(CAMDetectionMin.sampled_at.desc()).limit(100).all()
+    _dets=db.session.query(CAMDetectionMin).filter(CAMDetectionMin.cam_name == cam_name).order_by(CAMDetectionMin.sampled_at.desc()).limit(100).all()
     dets = []
     for det in _dets:
         dets.append(det.as_dict())
