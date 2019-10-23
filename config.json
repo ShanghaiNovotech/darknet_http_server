@@ -13,10 +13,14 @@
     "default_thresh": 0.25,
     "_default_thresh": "#default threshold for detection",
     "ALLOWED_EXTENSIONS": ["bmp", "tif", "png", "jpg", "jpeg", "gif"],
-    "cameras": [{"id":0, "name":"cam78", "method":"HTTP","type":"NORMAL","uri":"http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0"},
+    "cameras": [        {"id":0, "name":"cam78", "method":"HTTP","type":"NORMAL","uri":"http://192.168.9.78:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0","chart":""},
     			{"id":1, "name":"cam77", "method":"HTTP","type":"NORMAL","uri":"http://192.168.9.77:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0","chart":""},
     			{"id":2, "name":"cam76", "method":"HTTP","type":"NORMAL","uri":"http://192.168.9.76:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0","chart":""},
     			{"id":3, "name":"cam75", "method":"HTTP","type":"NORMAL","uri":"http://192.168.9.75:8080/capture/webCapture.jpg?channel=1&FTPsend=0&checkinfo=0","chart":""},
-    			{"id":4, "name":"dummy", "method":"HTTP","type":"NORMAL","uri":"https://picsum.photos/536/354","chart":""}
+    			{"id":4, "name":"dummy", "method":"HTTP","type":"NORMAL","uri":"https://picsum.photos/536/354","chart":""},
+    			{"id":5, "name":"cctv1", "method":"M3U8","type":"NORMAL","uri":"http://ivi.bupt.edu.cn/hls/cctv1hd.m3u8","chart":""},
+    			{"id":6, "name":"cctv3", "method":"M3U8","type":"NORMAL","uri":"http://ivi.bupt.edu.cn/hls/cctv3hd.m3u8","chart":""},
+    			{"id":7, "name":"cctv6", "method":"M3U8","type":"NORMAL","uri":"http://ivi.bupt.edu.cn/hls/cctv6hd.m3u8","chart":""},
+    			{"id":8, "name":"cctv8", "method":"M3U8","type":"NORMAL","uri":"http://ivi.bupt.edu.cn/hls/cctv8hd.m3u8","chart":""}
 			]
 }

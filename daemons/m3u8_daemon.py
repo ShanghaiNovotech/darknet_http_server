@@ -2,6 +2,7 @@ import requests
 import time
 import os
 import json
+from m3u8_image_extract import *
 
 
 with open('../config.json') as f:
@@ -15,17 +16,14 @@ PID=os.getpid()
 cnt=0
 
 def fetch_n_post(_id, name, url):
+    print(url)
     global cnt
     date_string = time.strftime("%Y%m%d-%H%M")
     fn="/tmp/"+str(PID)+"_"+ str(name) + "_cam_ftech.jpg"
     #print(fn)
     fn2=date_string+".txt"
-    res1 = requests.get(url)
-    if res1.status_code == 200:
-        print(str(cnt) + " 200 " + url)
-        cnt =  cnt + 1
-        with open(fn, 'wb') as f:
-            f.write(res1.content)
+
+    get_m3u8_frame(url, fn, 50)
 
     #post fn to server
     data = {"cam_id":_id, "cam_name":name}
@@ -47,7 +45,7 @@ def fetch_n_post(_id, name, url):
 
 while True:
     for cam in CAMS:
-        if cam['method']=="HTTP":
+        if cam['method']=="M3U8":
             try:
                 fetch_n_post(cam['id'], cam['name'], cam['uri'])
 
