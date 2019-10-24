@@ -41,6 +41,7 @@ AI CCTV Dashboard
           <td class="col-md-4"><img v-bind:src="camera.pic_path" width="300"/></td>
           <td class="col-md-2">[[camera.num_persons]], [[camera.num_luggages]]</td>
           <td class="col-md-2">
+            <!--<bar-chart></bar-chart>-->
             <div class="chart-container" style="width:200px; height:100px;">
               <canvas v-bind:id="'bar'+index"></canvas>
             </div>
@@ -52,12 +53,12 @@ AI CCTV Dashboard
   </div>
 </div><!-- /.container -->
 
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
-<script src="https://momentjs.com/downloads/moment-with-locales.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+<script src="https://unpkg.com/vue-chartjs/dist/vue-chartjs.min.js"></script>
 
 <script>
 var num_camera=1; //default cameras
+var charts=[];
 
 var app = new Vue({
   el: '#app',
@@ -69,7 +70,7 @@ var app = new Vue({
 
   },
   created:function(){
-      console.log("ASDFASDF");
+      console.log("APP started.");
   },
   mounted:function(){
     var _this=this;
@@ -80,23 +81,30 @@ var app = new Vue({
 });
 
 setInterval(function(){
-  //app.imageSRC0="upload/cam0_latest.jpg?"+new Date().getTime();
-  $.getJSON("/api/cameras", function(response_data){
-    //app.cameras=response_data.cameras;
-  });
   $.getJSON("/api/camera_detections", function(response_data){
     app.cameras=response_data;
-    renew_charts(response_data.length);
+    renew_charts(app.cameras.length); 
   });
-
 
 },2000);
 
 
 function renew_charts(num){
   // Bar chart
+  num=5;
   for(i=0; i<num; i++){
-    new Chart(document.getElementById("bar"+i), {
+    if(charts.length>i){ //already have charts
+	cam_name =app.cameras[i].cam_name;
+	(function(index){
+	 $.getJSON("/api/resampled_dets/"+cam_name, function(response_data){
+	    for(j=0; j<20; j++){
+	      charts[index].data.datasets[0].data[j]=response_data[j].num_persons;	  
+	    }
+	    charts[index].update()
+	  });
+	})(i);
+    }else{
+    charts[i]=new Chart(document.getElementById("bar"+i), {
         type: 'bar',
         data: {
           labels: ["a", "b", "c", "d", "e", "f","g","h","i","j","k","l","m","n","o","16","17","18","19","20"],
@@ -139,7 +147,8 @@ function renew_charts(num){
             }]
           }
         }
-    });
+      });
+    }
   }//for loop end
 }
 
