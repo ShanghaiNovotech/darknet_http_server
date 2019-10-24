@@ -14,16 +14,6 @@ AI CCTV Dashboard
 
 
 <div class="container" id="app">
-<!--
-  <div class="cameras" v-for="(camera, index) in cameras">
-    <div class="camera col-md-3" style="height:300px">
-      <img v-bind:src="camera.pic_path" width="200" />
-    </div>
-    <div v-if="index % 4 === 3">
-      <div class="w-100 d-none d-md-block"></div>
-    </div>
-  </div>
--->
   <div class="cameras" >
     <table class="table table-sm table-hover table-dark">
       <thead>
@@ -41,7 +31,6 @@ AI CCTV Dashboard
           <td class="col-md-4"><img v-bind:src="camera.pic_path" width="300"/></td>
           <td class="col-md-2">[[camera.num_persons]], [[camera.num_luggages]]</td>
           <td class="col-md-2">
-            <!--<bar-chart></bar-chart>-->
             <div class="chart-container" style="width:200px; height:100px;">
               <canvas v-bind:id="'bar'+index"></canvas>
             </div>
@@ -85,38 +74,45 @@ setInterval(function(){
     app.cameras=response_data;
     renew_charts(app.cameras.length); 
   });
-
-},2000);
+},1500);
 
 
 function renew_charts(num){
   // Bar chart
   num=5;
+  chart_len=20;
   for(i=0; i<num; i++){
     if(charts.length>i){ //already have charts
-	cam_name =app.cameras[i].cam_name;
-	(function(index){
-	 $.getJSON("/api/resampled_dets/"+cam_name, function(response_data){
-	    for(j=0; j<20; j++){
-	      charts[index].data.datasets[0].data[j]=response_data[j].num_persons;	  
-	    }
-	    charts[index].update()
-	  });
-	})(i);
+      (function(index){
+        $.getJSON("/api/resampled_dets/"+app.cameras[i].cam_name, function(response_data){
+          for(j=0; j<chart_len; j++){
+            charts[index].data.datasets[0].data[chart_len -j ]=response_data[j].num_persons; //reverse and ditch last minute    
+            this_num_persons=charts[index].data.datasets[0].data[j];
+            if(this_num_persons < 1.0 ){
+              charts[index].data.datasets[0].backgroundColor[j]="#AAAAAA";    
+            }else if(this_num_persons >=1.0 && this_num_persons < 2.0){
+              charts[index].data.datasets[0].backgroundColor[j]="#22AA22";
+            }else if(this_num_persons >=2.0 && this_num_persons < 4.0){
+              charts[index].data.datasets[0].backgroundColor[j]="#FF4500";
+            }else if(this_num_persons>4.0){
+              charts[index].data.datasets[0].backgroundColor[j]="#AA2222";
+            }
+          }
+          charts[index].update();
+        }); //ajax call end
+      })(i); //function(index) pass i to index
     }else{
-    charts[i]=new Chart(document.getElementById("bar"+i), {
+      charts[i]=new Chart(document.getElementById("bar"+i), {
         type: 'bar',
         data: {
-          labels: ["a", "b", "c", "d", "e", "f","g","h","i","j","k","l","m","n","o","16","17","18","19","20"],
-          datasets: [
-            {
-              label: "people",
-              backgroundColor: ["#AAAAAA", "#AAAAAA","#AA2222","#22AA22","#2222AA"],
-              data: [1,0.3,5,6,7,9,10,8,2.3,4.5,3,2.8,2.2,2.0,1.8,1.7,1.6,1.5,1.4,1.3],
-                    borderColor: '#555555',
-                    borderWidth: 1
-            }
-          ]
+          labels: ["-19", "-18", "-17", "-16", "-15", "-14","-13","-12","-11","-10","-9","-8","-7","-6","-5","-4","-3","-2","-1","0"],
+          datasets: [{
+            label: "people",
+            backgroundColor: ["#AAAAAA", "#AAAAAA"],
+            data: new Array(chart_len+1).join('0').split(''),
+            borderColor: '#555555',
+            borderWidth: 1
+          }]
         },
         options: {
           responsive: true,     
@@ -124,32 +120,32 @@ function renew_charts(num){
           legend: { display: false },
           title: {
             display: true,
-            text: '10 Minute Passengers'
+            text: 'Last 20 Minute Passengers'
           },
           scales: {
-                  xAxes: [{
-                    display: false,
-                gridLines: {
-                    color: "rgba(0, 0, 0, 0)"
-                },
-                barPercentage: 1.00,
-                categoryPercentage: 1.00,
+            xAxes: [{
+              display: false,
+              gridLines: {
+                color: "rgba(0, 0, 0, 0)"
+              },
+              barPercentage: 1.00,
+              categoryPercentage: 1.00,
             }],
             yAxes: [{
-                    display: false,
-                gridLines: {
-                    color: "rgba(0, 0, 0, 0)",
-                },
-                    ticks:{
-                            maxTicksLimit: 1,
-                            _min: -0.1 
-                    }
+              display: true,
+              gridLines: {
+                color: "rgba(0, 0, 0, 0)",
+              },
+              ticks:{
+                maxTicksLimit: 1,
+                _min: -0.1 
+              }
             }]
           }
         }
       });
     }
-  }//for loop end
+  }//for(i) loop end
 }
 
 </script>
