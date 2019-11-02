@@ -21,7 +21,7 @@ See the docstring of performDetect() for parameters.
 Directly viewing or returning bounding-boxed images requires scikit-image to be installed (`pip install scikit-image`)
 
 """
-#pylint: disable=R, W0401, W0614, W0703
+# pylint: disable=R, W0401, W0614, W0703
 from ctypes import *
 import math
 import random
@@ -35,31 +35,32 @@ import datetime
 from flask import jsonify
 from flask_bootstrap import Bootstrap
 from flask import Flask, render_template, request, request, redirect, url_for, send_from_directory
+from sqlalchemy import func
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
 
-
-#some global names
+# some global names
 netMain = None
 metaMain = None
 altNames = None
 
-#init app
+# init app
 app = Flask(__name__)
 
-#load conf
+# load conf
 with open('config.json') as f:
     config = json.load(f)
 app.config.update(config)
 
 Bootstrap(app)
-db=SQLAlchemy(app)
+db = SQLAlchemy(app)
 
-#db classes
+
+# db classes
 class CAMDetection(db.Model):
     id = db.Column("id", db.Integer, primary_key=True)
-    cam_id   = db.Column("cam_id", db.Integer, index=True)
-    cam_name = db.Column("cam_name", db.String(16),index=True)
+    cam_id = db.Column("cam_id", db.Integer, index=True)
+    cam_name = db.Column("cam_name", db.String(16), index=True)
     pic_path = db.Column("pic_path", db.String(64))
     det = db.Column('det', db.Unicode)
     created_at = db.Column('created_at', db.DateTime, default=datetime.datetime.utcnow)
@@ -72,23 +73,40 @@ class CAMDetection(db.Model):
 
 
 class CAMDetectionMin(db.Model):
-     id = db.Column("id", db.Integer, nullable=False, primary_key=True, autoincrement=True)
-     cam_id   = db.Column("cam_id", db.Integer,nullable=False)
-     cam_name = db.Column("cam_name", db.String(16),index=True,nullable=False)
-     num_persons=db.Column("num_persons", db.Float,nullable=False)
-     num_luggages=db.Column("num_luggages", db.Float,nullable=False)
-     sampled_at = db.Column('sampled_at', db.DateTime,nullable=False)
-     created_at = db.Column('created_at', db.DateTime, default=datetime.datetime.utcnow)
+    id = db.Column("id", db.Integer, nullable=False, primary_key=True, autoincrement=True)
+    cam_id = db.Column("cam_id", db.Integer, nullable=False)
+    cam_name = db.Column("cam_name", db.String(16), index=True, nullable=False)
+    num_persons = db.Column("num_persons", db.Float, nullable=False)
+    num_luggages = db.Column("num_luggages", db.Float, nullable=False)
+    sampled_at = db.Column('sampled_at', db.DateTime, nullable=False)
+    created_at = db.Column('created_at', db.DateTime, default=datetime.datetime.utcnow)
 
-     def __repr__(self):
+    def __repr__(self):
         return '<Detection %r>' % self.cam_name
 
-     def as_dict(self):
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+
+class CAMDetectionHour(db.Model):
+    id = db.Column("id", db.Integer, nullable=False, primary_key=True, autoincrement=True)
+    cam_id = db.Column("cam_id", db.Integer, nullable=False)
+    cam_name = db.Column("cam_name", db.String(16), index=True, nullable=False)
+    num_persons = db.Column("num_persons", db.Float, nullable=False)
+    num_luggages = db.Column("num_luggages", db.Float, nullable=False)
+    sampled_at = db.Column('sampled_at', db.DateTime, nullable=False)
+    created_at = db.Column('created_at', db.DateTime, default=datetime.datetime.utcnow)
+
+    def __repr__(self):
+        return '<Detection %r>' % self.cam_name
+
+    def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 db.create_all()
 db.session.commit()
+
 
 def row2dict(row):
     d = {}
@@ -97,27 +115,31 @@ def row2dict(row):
 
     return d
 
+
 ###functions and classes
 def sample(probs):
     s = sum(probs)
-    probs = [a/s for a in probs]
+    probs = [a / s for a in probs]
     r = random.uniform(0, 1)
     for i in range(len(probs)):
         r = r - probs[i]
         if r <= 0:
             return i
-    return len(probs)-1
+    return len(probs) - 1
+
 
 def c_array(ctype, values):
-    arr = (ctype*len(values))()
+    arr = (ctype * len(values))()
     arr[:] = values
     return arr
+
 
 class BOX(Structure):
     _fields_ = [("x", c_float),
                 ("y", c_float),
                 ("w", c_float),
                 ("h", c_float)]
+
 
 class DETECTION(Structure):
     _fields_ = [("bbox", BOX),
@@ -127,33 +149,39 @@ class DETECTION(Structure):
                 ("objectness", c_float),
                 ("sort_class", c_int)]
 
+
 class IMAGE(Structure):
     _fields_ = [("w", c_int),
                 ("h", c_int),
                 ("c", c_int),
                 ("data", POINTER(c_float))]
 
+
 class METADATA(Structure):
     _fields_ = [("classes", c_int),
                 ("names", POINTER(c_char_p))]
 
+
 def network_width(net):
     return lib.network_width(net)
+
 
 def network_height(net):
     return lib.network_height(net)
 
+
 def array_to_image(arr):
     import numpy as np
     # need to return old values to avoid python freeing memory
-    arr = arr.transpose(2,0,1)
+    arr = arr.transpose(2, 0, 1)
     c = arr.shape[0]
     h = arr.shape[1]
     w = arr.shape[2]
     arr = np.ascontiguousarray(arr.flat, dtype=np.float32) / 255.0
     data = arr.ctypes.data_as(POINTER(c_float))
-    im = IMAGE(w,h,c,data)
+    im = IMAGE(w, h, c, data)
     return im, arr
+
 
 def classify(net, meta, im):
     out = predict_image(net, im)
@@ -167,11 +195,12 @@ def classify(net, meta, im):
     res = sorted(res, key=lambda x: -x[1])
     return res
 
-def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45, debug= False):
+
+def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45, debug=False):
     """
     Performs the meat of the detection
     """
-    #pylint: disable= C0321
+    # pylint: disable= C0321
     im = load_image(image, 0, 0)
     if debug: print("Loaded image")
     ret = detect_image(net, meta, im, thresh, hier_thresh, nms, debug)
@@ -179,22 +208,23 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45, debug= False):
     if debug: print("freed image")
     return ret
 
-def detect_image(net, meta, im, thresh=.5, hier_thresh=.5, nms=.45, debug= False):
-    #import cv2
-    #custom_image_bgr = cv2.imread(image) # use: detect(,,imagePath,)
-    #custom_image = cv2.cvtColor(custom_image_bgr, cv2.COLOR_BGR2RGB)
-    #custom_image = cv2.resize(custom_image,(lib.network_width(net), lib.network_height(net)), interpolation = cv2.INTER_LINEAR)
-    #import scipy.misc
-    #custom_image = scipy.misc.imread(image)
-    #im, arr = array_to_image(custom_image)     # you should comment line below: free_image(im)
+
+def detect_image(net, meta, im, thresh=.5, hier_thresh=.5, nms=.45, debug=False):
+    # import cv2
+    # custom_image_bgr = cv2.imread(image) # use: detect(,,imagePath,)
+    # custom_image = cv2.cvtColor(custom_image_bgr, cv2.COLOR_BGR2RGB)
+    # custom_image = cv2.resize(custom_image,(lib.network_width(net), lib.network_height(net)), interpolation = cv2.INTER_LINEAR)
+    # import scipy.misc
+    # custom_image = scipy.misc.imread(image)
+    # im, arr = array_to_image(custom_image)     # you should comment line below: free_image(im)
     num = c_int(0)
     if debug: print("Assigned num")
     pnum = pointer(num)
     if debug: print("Assigned pnum")
     predict_image(net, im)
-    #print("c2h2: image shape:", im.shape)
+    # print("c2h2: image shape:", im.shape)
     if debug: print("did prediction")
-    #dets = get_network_boxes(net, custom_image_bgr.shape[1], custom_image_bgr.shape[0], thresh, hier_thresh, None, 0, pnum, 0) # OpenCV
+    # dets = get_network_boxes(net, custom_image_bgr.shape[1], custom_image_bgr.shape[0], thresh, hier_thresh, None, 0, pnum, 0) # OpenCV
     dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum, 0)
     if debug: print("Got dets")
     num = pnum[0]
@@ -205,10 +235,10 @@ def detect_image(net, meta, im, thresh=.5, hier_thresh=.5, nms=.45, debug= False
     res = []
     if debug: print("about to range")
     for j in range(num):
-        if debug: print("Ranging on "+str(j)+" of "+str(num))
-        if debug: print("Classes: "+str(meta), meta.classes, meta.names)
+        if debug: print("Ranging on " + str(j) + " of " + str(num))
+        if debug: print("Classes: " + str(meta), meta.classes, meta.names)
         for i in range(meta.classes):
-            if debug: print("Class-ranging on "+str(i)+" of "+str(meta.classes)+"= "+str(dets[j].prob[i]))
+            if debug: print("Class-ranging on " + str(i) + " of " + str(meta.classes) + "= " + str(dets[j].prob[i]))
             if dets[j].prob[i] > 0:
                 b = dets[j].bbox
                 if altNames is None:
@@ -228,7 +258,10 @@ def detect_image(net, meta, im, thresh=.5, hier_thresh=.5, nms=.45, debug= False
     if debug: print("freed detections")
     return res
 
-def performDetect(imagePath="./data/dog.jpg", thresh= 0.25, configPath = "../cfg/yolov3.cfg", weightPath = "../yolov3.weights", metaPath= "../cfg/coco_http.data", showImage= False, makeImageOnly = False, initOnly= False):
+
+def performDetect(imagePath="./data/dog.jpg", thresh=0.25, configPath="../cfg/yolov3.cfg",
+                  weightPath="../yolov3.weights", metaPath="../cfg/coco_http.data", showImage=False,
+                  makeImageOnly=False, initOnly=False):
     """
     Convenience function to handle the detection and returns of objects.
 
@@ -276,14 +309,14 @@ def performDetect(imagePath="./data/dog.jpg", thresh= 0.25, configPath = "../cfg
         }
     """
     # Import the global variables. This lets us instance Darknet once, then just call performDetect() again without instancing again
-    global metaMain, netMain, altNames #pylint: disable=W0603
+    global metaMain, netMain, altNames  # pylint: disable=W0603
     assert 0 < thresh < 1, "Threshold should be a float between zero and one (non-inclusive)"
     if not os.path.exists(configPath):
-        raise ValueError("Invalid config path `"+os.path.abspath(configPath)+"`")
+        raise ValueError("Invalid config path `" + os.path.abspath(configPath) + "`")
     if not os.path.exists(weightPath):
-        raise ValueError("Invalid weight path `"+os.path.abspath(weightPath)+"`")
+        raise ValueError("Invalid weight path `" + os.path.abspath(weightPath) + "`")
     if not os.path.exists(metaPath):
-        raise ValueError("Invalid data file path `"+os.path.abspath(metaPath)+"`")
+        raise ValueError("Invalid data file path `" + os.path.abspath(metaPath) + "`")
     if netMain is None:
         netMain = load_net_custom(configPath.encode("ascii"), weightPath.encode("ascii"), 0, 1)  # batch size = 1
     if metaMain is None:
@@ -313,10 +346,11 @@ def performDetect(imagePath="./data/dog.jpg", thresh= 0.25, configPath = "../cfg
         print("Initialized detector")
         return None
 
-#allowd upload files
+
+# allowd upload files
 def allowed_file(filename):
     return '.' in filename and \
-        filename.rsplit('.', 1)[1].lower() in set(app.config['ALLOWED_EXTENSIONS'])
+           filename.rsplit('.', 1)[1].lower() in set(app.config['ALLOWED_EXTENSIONS'])
 
 
 if app.config['LOAD_NNET']:
@@ -327,8 +361,7 @@ if app.config['LOAD_NNET']:
     lib.network_height.restype = c_int
 
     copy_image_from_bytes = lib.copy_image_from_bytes
-    copy_image_from_bytes.argtypes = [IMAGE,c_char_p]
-
+    copy_image_from_bytes.argtypes = [IMAGE, c_char_p]
 
     predict = lib.network_predict_ptr
     predict.argtypes = [c_void_p, POINTER(c_float)]
@@ -343,7 +376,8 @@ if app.config['LOAD_NNET']:
     make_image.restype = IMAGE
 
     get_network_boxes = lib.get_network_boxes
-    get_network_boxes.argtypes = [c_void_p, c_int, c_int, c_float, c_float, POINTER(c_int), c_int, POINTER(c_int), c_int]
+    get_network_boxes.argtypes = [c_void_p, c_int, c_int, c_float, c_float, POINTER(c_int), c_int, POINTER(c_int),
+                                  c_int]
     get_network_boxes.restype = POINTER(DETECTION)
 
     make_network_boxes = lib.make_network_boxes
@@ -400,15 +434,17 @@ if app.config['LOAD_NNET']:
 
     performDetect()
 
-#testing if works!
-#imagePath="./data/dog.jpg"
-#detections = detect(netMain, metaMain, imagePath.encode("ascii"), app.config['default_thresh'])
-#print("print " + json.dumps(detections))
 
-#root
+# testing if works!
+# imagePath="./data/dog.jpg"
+# detections = detect(netMain, metaMain, imagePath.encode("ascii"), app.config['default_thresh'])
+# print("print " + json.dumps(detections))
+
+# root
 @app.route('/')
 def hello_world():
     return render_template('index.html', value=0)
+
 
 @app.route('/stats')
 def stats():
@@ -427,56 +463,62 @@ def settings():
 
 @app.route('/api/cameras')
 def api_cameras():
-    return jsonify(({"cameras":app.config["cameras"]}))
+    return jsonify(({"cameras": app.config["cameras"]}))
+
 
 @app.route('/api/camera_detections')
 def camera_detections():
-    results=CAMDetection.query.group_by(CAMDetection.cam_name).order_by(CAMDetection.cam_id.asc()).all()
+    results = CAMDetection.query.group_by(CAMDetection.cam_name).order_by(CAMDetection.cam_id.asc()).all()
     ret = []
     for cam in results:
         cam_dict = cam.as_dict()
         cam_dict['det'] = json.loads(cam_dict['det'])
-        num_persons=0
-        num_luggages=0
-        for elem in cam_dict['det']: 
-            if elem[0]=='person':
-                num_persons+=1
+        num_persons = 0
+        num_luggages = 0
+        for elem in cam_dict['det']:
+            if elem[0] == 'person':
+                num_persons += 1
 
-            if elem[0] in ['backpack','handbag','suitcase']:
-                num_luggages+=1
+            if elem[0] in ['backpack', 'handbag', 'suitcase']:
+                num_luggages += 1
 
-        cam_dict["num_persons"]=num_persons
-        cam_dict["num_luggages"]=num_luggages
+        cam_dict["num_persons"] = num_persons
+        cam_dict["num_luggages"] = num_luggages
 
         ret.append(cam_dict)
 
     return jsonify(ret)
 
+
 @app.route('/api/health')
 def health():
     return ""
 
+
 @app.route('/api/resampled_dets/<cam_name>')
 def resampled_dets(cam_name):
-    _dets=db.session.query(CAMDetectionMin).filter(CAMDetectionMin.cam_name == cam_name).order_by(CAMDetectionMin.sampled_at.desc()).limit(100).all()
+    _dets = db.session.query(CAMDetectionMin).filter(CAMDetectionMin.cam_name == cam_name).order_by(
+        CAMDetectionMin.sampled_at.desc()).limit(100).all()
     dets = []
     for det in _dets:
         dets.append(det.as_dict())
-    return jsonify(dets) 
+    return jsonify(dets)
 
-#return urls
+
+# return urls
 @app.route('/api/latest_images')
 def latest_images():
     return ""
 
-#serve upload files
+
+# serve upload files
 @app.route('/upload/<path:path>')
 def send_js(path):
     return send_from_directory('upload', path)
 
 
-#upload
-@app.route('/upload', methods=['GET','POST'])
+# upload
+@app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
         # check if the post request has the file part
@@ -489,7 +531,7 @@ def upload_file():
         _cam_id = data["cam_id"]
         _cam_name = data["cam_name"]
         print(_cam_id, _cam_name)
-        
+
         # if user does not select file, browser also
         # submit a empty part without filename
         if file.filename == '':
@@ -497,54 +539,53 @@ def upload_file():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             date_string = time.strftime("%Y%m%d-%H%M%S")
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], _cam_name+"_"+date_string+".jpg" )
-            latest_file_path = os.path.join(app.config['UPLOAD_FOLDER'],  _cam_name+"_latest.jpg")
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], _cam_name + "_" + date_string + ".jpg")
+            latest_file_path = os.path.join(app.config['UPLOAD_FOLDER'], _cam_name + "_latest.jpg")
             file.save(file_path)
             detections = detect(netMain, metaMain, file_path.encode("ascii"), app.config['default_thresh'])
-            json_detections=json.dumps(detections)
+            json_detections = json.dumps(detections)
 
-            #db save
-            obj=CAMDetection(cam_id=_cam_id, cam_name=_cam_name, det=json_detections, pic_path=file_path)
-            db.session.add(obj)   
+            # db save
+            obj = CAMDetection(cam_id=_cam_id, cam_name=_cam_name, det=json_detections, pic_path=file_path)
+            db.session.add(obj)
             db.session.commit()
 
-            #html processing
-            res = '<pre>' + json_detections +'</pre>'
-            image_html='<img src="'+file_path+'" alt="detection">'
+            # html processing
+            res = '<pre>' + json_detections + '</pre>'
+            image_html = '<img src="' + file_path + '" alt="detection">'
 
-            #annotate
+            # annotate
             img = cv2.imread(file_path)
             img_height, img_width, img_ch = img.shape
-            if(img_height > img_width):
+            if (img_height > img_width):
                 img_length = img_height
             else:
                 img_length = img_width
 
-            idx=0
-            crop_html =""
+            idx = 0
+            crop_html = ""
             img2 = img.copy()
             for det in detections:
-                idx += 1 
+                idx += 1
                 print(json.dumps(det))
                 x0 = int(det[2][0] - det[2][2] / 2)
                 x1 = int(det[2][0] + det[2][2] / 2)
                 y0 = int(det[2][1] - det[2][3] / 2)
                 y1 = int(det[2][1] + det[2][3] / 2)
-                cv2.rectangle(img,(x0, y0), (x1,y1),(0,255,0),1)
-                annotation = det[0] +" "+ str(int(det[1]*100))+"%" 
-                if app.config['approx_dist'] and det[0]=="person":
-                    annotation = annotation+", "+str(int(2.0/(det[2][2]/float(img_length)))) + "m"
+                cv2.rectangle(img, (x0, y0), (x1, y1), (0, 255, 0), 1)
+                annotation = det[0] + " " + str(int(det[1] * 100)) + "%"
+                if app.config['approx_dist'] and det[0] == "person":
+                    annotation = annotation + ", " + str(int(2.0 / (det[2][2] / float(img_length)))) + "m"
 
-                if app.config['crop_person'] and det[0]=="person":
+                if app.config['crop_person'] and det[0] == "person":
                     crop_img = img2[y0:y1, x0:x1].copy()
-                    crop_fp= file_path+str(idx)+".png"
+                    crop_fp = file_path + str(idx) + ".png"
                     cv2.imwrite(crop_fp, crop_img)
-                    crop_html += '<img src="'+crop_fp+'" alt="crop">'
+                    crop_html += '<img src="' + crop_fp + '" alt="crop">'
 
+                cv2.putText(img, annotation, (x0, y0 + 12), cv2.FONT_HERSHEY_PLAIN, 1, (230, 230, 230), 1)
 
-                cv2.putText(img, annotation, (x0,y0+12),cv2.FONT_HERSHEY_PLAIN,1,(230,230,230),1)
-            
-            cv2.imwrite(file_path,img)
+            cv2.imwrite(file_path, img)
             shutil.copyfile(file_path, latest_file_path)
 
             if app.config['crop_person']:
@@ -562,7 +603,8 @@ def upload_file():
     </form>
     '''
 
-#upload
+
+# upload
 @app.route('/upload.json', methods=['POST'])
 def upload_json():
     if request.method == 'POST':
@@ -578,13 +620,13 @@ def upload_json():
             print(file_path)
             file.save(file_path)
             detections = detect(netMain, metaMain, file_path.encode("ascii"), app.config['default_thresh'])
-            return json.dumps(detections) 
+            return json.dumps(detections)
 
     return "NO FILES UPLOADED."
 
 
-#upload and split into 9 sub images (expirmental for supersized image)
-@app.route('/upload9', methods=['GET','POST'])
+# upload and split into 9 sub images (expirmental for supersized image)
+@app.route('/upload9', methods=['GET', 'POST'])
 def upload9():
     if request.method == 'POST':
         # check if the post request has the file part
@@ -602,38 +644,40 @@ def upload9():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             print(file_path)
             file.save(file_path)
-            
-            #split into 9 images
+
+            # split into 9 images
             img = cv2.imread(file_path)
 
             height, width, channels = img.shape
 
-            x_crops=3
-            y_crops=3
+            x_crops = 3
+            y_crops = 3
 
             print(height, width, channels)
 
-            sub_image_paths=[]
-            sub_image_dets=[]
+            sub_image_paths = []
+            sub_image_dets = []
             h = int(height / y_crops)
             w = int(width / x_crops)
             for j in range(y_crops):
                 for i in range(x_crops):
                     x = int(width / x_crops * i)
                     y = int(height / y_crops * j)
-                    print(x,y,h,w)
-                    sub_img = img[y:y+h, x:x+w]
-                    sub_img_path = file_path+"_" + str(j) + "_" + str(i) +".jpg"
+                    print(x, y, h, w)
+                    sub_img = img[y:y + h, x:x + w]
+                    sub_img_path = file_path + "_" + str(j) + "_" + str(i) + ".jpg"
                     sub_image_paths.append(sub_img_path)
                     cv2.imwrite(sub_img_path, sub_img)
-                    sub_image_dets.append( detect(netMain, metaMain, sub_img_path.encode("ascii"), app.config['default_thresh']) )
+                    sub_image_dets.append(
+                        detect(netMain, metaMain, sub_img_path.encode("ascii"), app.config['default_thresh']))
 
-            total_det = detect(netMain, metaMain, file_path.encode("ascii"), app.config['default_thresh']) 
-            html = json.dumps(total_det) 
-            html = html +'\n<br>'+ str(json_stats(json.dumps(total_det)) )
-            html= html + '\n<br><img src="'+file_path+'" width="750" alt="detection">'
-            for i in range(x_crops*y_crops):
-                html=html+ '\n<br><img src="'+sub_image_paths[i]+'" width="250" alt="detection"><br><p>'+json.dumps(sub_image_dets[i])
+            total_det = detect(netMain, metaMain, file_path.encode("ascii"), app.config['default_thresh'])
+            html = json.dumps(total_det)
+            html = html + '\n<br>' + str(json_stats(json.dumps(total_det)))
+            html = html + '\n<br><img src="' + file_path + '" width="750" alt="detection">'
+            for i in range(x_crops * y_crops):
+                html = html + '\n<br><img src="' + sub_image_paths[
+                    i] + '" width="250" alt="detection"><br><p>' + json.dumps(sub_image_dets[i])
             return html
 
     return '''
@@ -646,26 +690,52 @@ def upload9():
     </form>
     '''
 
+
 def json_stats(j):
-    objs=json.loads(j)
+    objs = json.loads(j)
     count = len(objs)
     dets = {}
     for obj in objs:
-       if dets.get(obj[0]):
-           dets[obj[0]]=dets[obj[0]]+1
-       else:
-           dets[obj[0]]=1
+        if dets.get(obj[0]):
+            dets[obj[0]] = dets[obj[0]] + 1
+        else:
+            dets[obj[0]] = 1
     return dets
 
 
-#server static image
+# server static image
 @app.route('/darknet_http_server/static/<path:path>')
 def send_static(path):
     return send_from_directory('static', path)
 
 
-#server upload image
+# server upload image
 @app.route('/darknet_http_server/upload/<path:path>')
 def send_upload(path):
     return send_from_directory('upload', path)
 
+
+@app.route('/stats/gen_hour_stats')
+def gen_hour_stats():
+    dets = []
+    for x in range(24):
+        dets.append([])
+        for y in range(7):
+            dets[x].append(0)
+    six_day_ago = (datetime.datetime.now() - datetime.timedelta(days=6)).strftime("%Y-%m-%d 00:00:00")
+    _dets = db.session.query(CAMDetectionHour.sampled_at, func.sum(CAMDetectionHour.num_persons).label("num_persons")).\
+        filter(CAMDetectionHour.sampled_at > six_day_ago, CAMDetectionHour.num_persons > 0).group_by(
+        CAMDetectionHour.sampled_at).order_by(
+        CAMDetectionHour.sampled_at.desc()).all()
+
+    for det in _dets:
+        hour = int(det[0].strftime("%Y-%m-%d %H:%M:%S")[11:13]) - 1
+        if hour == -1:
+            week = det[0].weekday() % 7
+        else:
+            week = (det[0].weekday() + 1) % 7
+
+        num_persons = det[1] if det[1] >= 0 else 0
+        print(hour, week, num_persons)
+        dets[hour][week] = num_persons
+    return jsonify({"data": dets})

@@ -28,34 +28,7 @@ AI Stats
 
 <script>
 //heat map
-var _z = []; 
-for (var i = 0 ; i < 24; i++) {
-	    _z[i] = []; 
-	    for (var j = 0; j < 7; j++) {
-		            _z[i][j] = (Math.random() * 100);
-		        }
-}
-var data = [
-	  {
-		      z: _z,
-		      x: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', "Sat"],
-		      y: ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'],
-		      type: 'heatmap',
-		      xgap: 1,
-		      ygap: 1,
-		      _coloraxis: "coloraxis2",
-		      colorscale: [
-			          ['0.0', 'rgb(0,255,0)'],
-			          ['0.2', 'rgb(50,200,0)'],
-			          ['0.4', 'rgb(200,150,0)'],
-			          ['0.6', 'rgb(255,50,0)'],
-			          ['0.8', 'rgb(255,10,0)'],
-			          ['1.0', 'rgb(255,0,0)']],
-		      colorbar:{
-			            thickness: 10
-			          }
-		    }
-	];
+
 
 var layout = {
 	  title: 'Hourly Heatmap',
@@ -74,8 +47,39 @@ var layout = {
 	  _paper_bgcolor: '#eee'
 };
 
-Plotly.newPlot('myDiv', data, layout, {showSendToCloud: false});
+getInfo();
 
+setInterval(function(){
+    getInfo();
+},1000*60*60);
+
+function getInfo(){
+    $.getJSON("/stats/gen_hour_stats", function(response_data){
+        var _z=response_data.data;
+        var data = [
+            {
+                 z: _z,
+                 x: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', "Sat"],
+                 y: ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'],
+                 type: 'heatmap',
+                 xgap: 1,
+                 ygap: 1,
+                  _coloraxis: "coloraxis2",
+                  colorscale: [
+                       ['0.0', 'rgb(0,255,0)'],
+                          ['0.2', 'rgb(50,200,0)'],
+                          ['0.4', 'rgb(200,150,0)'],
+                          ['0.6', 'rgb(255,50,0)'],
+                          ['0.8', 'rgb(255,10,0)'],
+                          ['1.0', 'rgb(255,0,0)']],
+                  colorbar:{
+                            thickness: 10
+                          }
+            }
+        ];
+        Plotly.newPlot('myDiv', data, layout, {showSendToCloud: false});
+    });
+}
 
 
 // Bar chart
